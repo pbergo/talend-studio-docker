@@ -1,23 +1,34 @@
-# 1. Atualizado para Java 17 para resolver o erro UnsupportedClassVersionError (versão 61.0)
-FROM eclipse-temurin:17-jdk
+FROM ubuntu:22.04
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libwebkit2gtk-4.1-0 \
-        libswt-gtk-4-java \
-        libswt-cairo-gtk-4-jni \
-        unzip && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:0
 
-# 2. Copia o arquivo .zip local que está na mesma pasta do Dockerfile
-COPY Talend-Studio-20260708_1430-V8.0.1.zip /tmp/talend.zip
+# 1. Instala Xvfb (Virtual Framebuffer), x11vnc, noVNC, XFCE e dependências Java/GTK
+RUN apt-get update && apt-get install -y \
+    xvfb \
+    x11vnc \
+    xfce4 \
+    xfce4-goodies \
+    novnc \
+    websockify \
+    dbus-x11 \
+    sudo \
+    curl \
+    wget \
+    openjdk-17-jdk \
+    libgtk-3-0 \
+    libglu1-mesa \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# 3. Descompacta e remove o zip
-RUN unzip /tmp/talend.zip -d /opt && \
-    rm /tmp/talend.zip
+# 2. Cria usuário
+RUN useradd -m -s /bin/bash talenduser && \
+    echo "talenduser:talend123" | chpasswd && \
+    usermod -aG sudo talenduser
 
-# 4. Configuração das variáveis de ambiente e comando de execução
-ENV PATH="/opt/Talend-Studio-20260708_1430-V8.0.1:${PATH}"
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-CMD ["/opt/Talend-Studio-20260708_1430-V8.0.1/Talend-Studio-linux-gtk-x86_64"]
+EXPOSE 6080
+
+ENTRYPOINT ["/entrypoint.sh"]
